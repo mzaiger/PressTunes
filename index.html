@@ -654,6 +654,7 @@ function startPlayback() {
   if (!s.audio) return;
 
   audio.src = s.audio;
+  audio.playbackRate = 0.75;
 
   const tryPlay = audio.play();
   if (tryPlay !== undefined) {
@@ -669,6 +670,7 @@ function startPlayback() {
   updateBigBtn();
 
   clearInterval(playTimer);
+  // 750ms interval keeps progress bar in sync with 0.75x-speed audio
   playTimer = setInterval(() => {
     playSeconds++;
     updateNowPlaying();
@@ -678,7 +680,7 @@ function startPlayback() {
       currentIdx = (currentIdx + 1) % songs.length;
       updateCarousel();
     }
-  }, 1000);
+  }, 750);
 }
 
 function stopPlayback() {
