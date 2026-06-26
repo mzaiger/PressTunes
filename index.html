@@ -670,17 +670,10 @@ function startPlayback() {
   updateBigBtn();
 
   clearInterval(playTimer);
-  // 750ms interval keeps progress bar in sync with 0.75x-speed audio
+  // Use actual audio.currentTime for progress so speed changes don't cause early cutoff
   playTimer = setInterval(() => {
-    playSeconds++;
     updateNowPlaying();
-    if (playSeconds >= CLIP_DURATION) {
-      stopPlayback();
-      // auto-advance
-      currentIdx = (currentIdx + 1) % songs.length;
-      updateCarousel();
-    }
-  }, 750);
+  }, 250);
 }
 
 function stopPlayback() {
@@ -700,12 +693,16 @@ function updateNowPlaying() {
   const s = songs[currentIdx];
   document.getElementById('npText').textContent = `▶ ${s.artist} — ${s.title}`;
   document.getElementById('npDot').classList.remove('idle');
-  const pct = (playSeconds / CLIP_DURATION) * 100;
+
+  const cur = audio.currentTime || 0;
+  const dur = audio.duration || 0;
+  const pct = dur > 0 ? (cur / dur) * 100 : 0;
   document.getElementById('progressFill').style.width = pct + '%';
-  const remaining = CLIP_DURATION - playSeconds;
+
+  const remaining = dur > 0 ? Math.max(0, dur - cur) : 0;
   const m = Math.floor(remaining / 60);
-  const sec = remaining % 60;
-  document.getElementById('npTime').textContent = `0:${String(sec).padStart(2, '0')}`;
+  const sec = Math.floor(remaining % 60);
+  document.getElementById('npTime').textContent = `${m}:${String(sec).padStart(2, '0')}`;
 }
 
 function updateBigBtn() {
