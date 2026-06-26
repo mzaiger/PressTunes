@@ -54,7 +54,9 @@
     font-weight: 700;
     letter-spacing: 1.5px;
     text-shadow: 0 0 8px #FFD700aa;
-    padding: 4px 0 8px;
+    padding: 5px 0;
+    background: #000;
+    border-bottom: 1px solid #003355;
     animation: mutedPulse 3s ease-in-out infinite;
   }
   @keyframes mutedPulse {
@@ -429,14 +431,14 @@
 
 <div class="cabinet">
 
-  <!-- Muted Banner -->
-  <div class="muted-banner">🔇 MUTED ON BAR SPEAKERS (DJ PLAYING)</div>
-
   <!-- Screen Bezel -->
   <div class="screen-bezel">
 
     <!-- Equalizer -->
     <div class="eq-bar-container" id="eqBars"></div>
+
+    <!-- Muted Banner -->
+    <div class="muted-banner">🔇 MUTED ON BAR SPEAKERS (DJ PLAYING)</div>
 
     <!-- Now Playing strip -->
     <div class="now-playing">
@@ -699,7 +701,7 @@ function updateNowPlaying() {
   const pct = dur > 0 ? (cur / dur) * 100 : 0;
   document.getElementById('progressFill').style.width = pct + '%';
 
-  const remaining = dur > 0 ? Math.max(0, dur - cur) : 0;
+  const remaining = dur > 0 ? Math.max(0, (dur - cur) / (audio.playbackRate || 1)) : 0;
   const m = Math.floor(remaining / 60);
   const sec = Math.floor(remaining % 60);
   document.getElementById('npTime').textContent = `${m}:${String(sec).padStart(2, '0')}`;
