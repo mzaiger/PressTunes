@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PressTunes</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+  }
+
+  /* ── CABINET SHELL ── */
+  .cabinet {
+    width: 560px;
+    background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 40%, #0d0d1a 100%);
+    border-radius: 32px 32px 20px 20px;
+    border: 3px solid #00bfff;
+    box-shadow:
+      0 0 30px #00bfff88,
+      0 0 80px #0066cc44,
+      inset 0 0 20px #00000088;
+    padding: 16px 20px 24px;
+    position: relative;
+    user-select: none;
+  }
+
+  /* outer neon glow ring */
+  .cabinet::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 38px 38px 26px 26px;
+    border: 2px solid #00bfff44;
+    box-shadow: 0 0 40px #00bfff66;
+    pointer-events: none;
+  }
+
+  /* ── MUTED BANNER ── */
+  .muted-banner {
+    text-align: center;
+    color: #FFD700;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 8px #FFD700aa;
+    padding: 5px 0;
+    background: #000;
+    border-bottom: 1px solid #003355;
+    animation: mutedPulse 3s ease-in-out infinite;
+  }
+  @keyframes mutedPulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  /* ── SCREEN BEZEL ── */
+  .screen-bezel {
+    background: #000;
+    border-radius: 12px;
+    border: 2px solid #0077aa;
+    box-shadow: inset 0 0 20px #001133, 0 0 15px #00bfff44;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── EQUALIZER ── */
+  .eq-bar-container {
+    background: #000;
+    padding: 8px 10px 4px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 72px;
+    border-bottom: 1px solid #003355;
+  }
+  .eq-bar {
+    flex: 1;
+    background: linear-gradient(to top, #00ff88, #00ccff, #0088ff);
+    border-radius: 2px 2px 0 0;
+    transition: height 0.08s ease;
+    min-height: 4px;
+    box-shadow: 0 0 6px #00ccff88;
+    opacity: 0.85;
+  }
+
+  /* ── NOW PLAYING STRIP ── */
+  .now-playing {
+    background: linear-gradient(90deg, #001122, #002244, #001122);
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid #003355;
+  }
+  .now-playing-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #00ff88;
+    box-shadow: 0 0 6px #00ff88;
+    animation: blink 1s step-end infinite;
+    flex-shrink: 0;
+  }
+  .now-playing-dot.idle { background: #444; box-shadow: none; animation: none; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .now-playing-text {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: #00ccff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .now-playing-time {
+    margin-left: auto;
+    font-size: 11px;
+    color: #0088ff;
+    flex-shrink: 0;
+  }
+
+  /* ── CAROUSEL AREA ── */
+  .carousel-area {
+    background: radial-gradient(ellipse at center, #001133 0%, #000 100%);
+    padding: 18px 12px;
+    overflow: hidden;
+    position: relative;
+    height: 280px;
+  }
+
+  .carousel-track {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    position: relative;
+  }
+
+  /* individual cards */
+  .song-card {
+    position: absolute;
+    cursor: pointer;
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                opacity 0.5s ease,
+                filter 0.5s ease,
+                z-index 0s;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px #00000088;
+  }
+  .song-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+  .song-card .card-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 50%, #00000099 100%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: flex-end;
+    padding: 8px;
+  }
+  .song-card:hover .card-overlay,
+  .song-card.active .card-overlay {
+    opacity: 1;
+  }
+  .card-play-btn {
+    width: 36px; height: 36px;
+    background: #00bfff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px;
+    box-shadow: 0 0 12px #00bfff88;
+    transition: transform 0.2s;
+  }
+  .song-card.active .card-play-btn { background: #00ff88; box-shadow: 0 0 12px #00ff8888; }
+  .card-play-btn svg { width: 14px; height: 14px; fill: #000; margin-left: 2px; }
+  .card-play-btn.pause svg { margin-left: 0; }
+
+  /* position/scale slots — 5 visible positions */
+  /* positions: -2, -1, 0(center), +1, +2 */
+  .song-card[data-pos="-2"] {
+    transform: translateX(-220px) scale(0.55) rotateY(45deg);
+    opacity: 0.2;
+    filter: brightness(0.4);
+    z-index: 1;
+    width: 180px; height: 180px;
+  }
+  .song-card[data-pos="-1"] {
+    transform: translateX(-135px) scale(0.72) rotateY(30deg);
+    opacity: 0.6;
+    filter: brightness(0.65);
+    z-index: 2;
+    width: 180px; height: 180px;
+  }
+  .song-card[data-pos="0"] {
+    transform: translateX(0) scale(1) rotateY(0deg);
+    opacity: 1;
+    filter: brightness(1);
+    z-index: 5;
+    width: 200px; height: 200px;
+    box-shadow: 0 0 30px #00bfff66, 0 8px 30px #00000099;
+  }
+  .song-card[data-pos="1"] {
+    transform: translateX(135px) scale(0.72) rotateY(-30deg);
+    opacity: 0.6;
+    filter: brightness(0.65);
+    z-index: 2;
+    width: 180px; height: 180px;
+  }
+  .song-card[data-pos="2"] {
+    transform: translateX(220px) scale(0.55) rotateY(-45deg);
+    opacity: 0.2;
+    filter: brightness(0.4);
+    z-index: 1;
+    width: 180px; height: 180px;
+  }
+  /* hidden offscreen */
+  .song-card[data-pos="-3"],
+  .song-card[data-pos="3"],
+  .song-card[data-pos="-4"],
+  .song-card[data-pos="4"] {
+    transform: translateX(0) scale(0.4);
+    opacity: 0;
+    z-index: 0;
+    pointer-events: none;
+    width: 180px; height: 180px;
+  }
+
+  /* ── SONG INFO ── */
+  .song-info-bar {
+    background: #000;
+    padding: 8px 12px 6px;
+    text-align: center;
+    border-top: 1px solid #003355;
+  }
+  .song-artist {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #00ccff;
+    text-shadow: 0 0 8px #00ccff88;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .song-title {
+    font-size: 11px;
+    color: #aaa;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-wrap {
+    background: #000;
+    padding: 0 12px 6px;
+  }
+  .progress-bg {
+    background: #111;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00bfff, #00ff88);
+    width: 0%;
+    transition: width 0.5s linear;
+    box-shadow: 0 0 6px #00bfff;
+  }
+
+  /* ── NAV BUTTONS ── */
+  .nav-row {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px 12px 10px;
+  }
+  .nav-btn {
+    background: linear-gradient(180deg, #0a2a44, #061a2e);
+    border: 1px solid #0066aa;
+    border-radius: 8px;
+    color: #00ccff;
+    font-size: 16px;
+    width: 40px; height: 34px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px #00000066;
+  }
+  .nav-btn:hover {
+    background: linear-gradient(180deg, #0d3a60, #082444);
+    box-shadow: 0 0 10px #00bfff44;
+  }
+  .nav-btn:active { transform: scale(0.95); }
+  .song-counter {
+    font-size: 11px;
+    color: #0066aa;
+    min-width: 60px;
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* ── CABINET BOTTOM ── */
+  .cabinet-bottom {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 4px;
+  }
+  .brand-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 3px;
+    text-shadow:
+      0 0 10px #00bfff,
+      0 0 25px #0077ff88;
+    flex: 1;
+  }
+  .brand-name span { color: #00bfff; }
+
+  /* coin slot + card slot */
+  .slots {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .coin-slot {
+    width: 28px; height: 28px;
+    background: linear-gradient(145deg, #222, #111);
+    border: 2px solid #333;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .coin-slot:hover { border-color: #00bfff; }
+  .card-slot {
+    width: 44px; height: 14px;
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 3px;
+  }
+
+  /* big play button */
+  .big-play-btn {
+    width: 56px; height: 56px;
+    background: radial-gradient(circle at 40% 35%, #003366, #001122);
+    border: 2px solid #0055aa;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 16px #00bfff66, inset 0 0 10px #00000066;
+    transition: box-shadow 0.3s;
+    flex-shrink: 0;
+  }
+  .big-play-btn:hover { box-shadow: 0 0 28px #00bfffaa, inset 0 0 10px #00000066; }
+  .big-play-btn svg { width: 22px; height: 22px; fill: #00bfff; margin-left: 3px; }
+
+  /* ── REFLECTION ── */
+  .screen-bezel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 40%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);
+    pointer-events: none;
+    border-radius: 12px 12px 0 0;
+  }
+
+  /* ── AUDIO PLAYING ANIMATION ── */
+  @keyframes cardGlow {
+    0%,100% { box-shadow: 0 0 30px #00bfff66, 0 8px 30px #00000099; }
+    50% { box-shadow: 0 0 50px #00ff8888, 0 8px 30px #00000099; }
+  }
+  .song-card.playing[data-pos="0"] {
+    animation: cardGlow 1s ease-in-out infinite;
+  }
+
+  /* ── COMING SOON BANNER ── */
+  .coming-soon-banner {
+    position: absolute;
+    bottom: 22px;
+    left: 0; right: 0;
+    background: linear-gradient(90deg, #cc6600dd, #ff9900ee, #cc6600dd);
+    color: #fff;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-align: center;
+    padding: 5px 4px;
+    text-shadow: 0 1px 3px #000;
+    box-shadow: 0 0 10px #ff990066;
+    pointer-events: none;
+    z-index: 10;
+    transform: rotate(-2deg) scaleX(1.05);
+  }
+  .song-card.no-audio {
+    cursor: default;
+  }
+  .song-card.no-audio .card-overlay {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="cabinet">
+
+  <!-- Screen Bezel -->
+  <div class="screen-bezel">
+
+    <!-- Equalizer -->
+    <div class="eq-bar-container" id="eqBars"></div>
+
+    <!-- Muted Banner -->
+    <div class="muted-banner">🔇 MUTED ON BAR SPEAKERS (DJ PLAYING)</div>
+
+    <!-- Now Playing strip -->
+    <div class="now-playing">
+      <div class="now-playing-dot idle" id="npDot"></div>
+      <div class="now-playing-text" id="npText">— SELECT A TRACK TO PLAY —</div>
+      <div class="now-playing-time" id="npTime">0:00</div>
+    </div>
+
+    <!-- Carousel -->
+    <div class="carousel-area">
+      <div class="carousel-track" id="carouselTrack"></div>
+    </div>
+
+    <!-- Song Info -->
+    <div class="song-info-bar">
+      <div class="song-artist" id="infoArtist">PRESSTUNES</div>
+      <div class="song-title" id="infoTitle">Select a single to preview</div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap">
+      <div class="progress-bg"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <!-- Nav -->
+    <div class="nav-row">
+      <button class="nav-btn" id="btnPrev" title="Previous">&#9664;&#9664;</button>
+      <span class="song-counter" id="songCounter">1 / 18</span>
+      <button class="nav-btn" id="btnNext" title="Next">&#9654;&#9654;</button>
+    </div>
+
+  </div><!-- /screen-bezel -->
+
+  <!-- Cabinet Bottom Bar -->
+  <div class="cabinet-bottom">
+    <div class="brand-name">Press<span>Tunes</span></div>
+    <div class="slots">
+      <div class="coin-slot" title="Insert coin">🪙</div>
+      <div class="card-slot"></div>
+    </div>
+    <div class="big-play-btn" id="bigPlayBtn" title="Play / Pause">
+      <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+    </div>
+  </div>
+
+</div><!-- /cabinet -->
+
+<!-- Hidden audio element -->
+<audio id="audioPlayer" preload="none"></audio>
+
+<script>
+// ── SONG DATA ──
+const songs = [
+  { artist: "Sinistry",             title: "Oh Well",                    file: "Sinistry - Oh Well.png",                              audio: "Sinistry - Oh Well.mp3" },
+  { artist: "Fine Finch Scales",    title: "Grosser",                    file: "Fine Finch Scales - Grosser.png",                     audio: "Fine Finch Scales - Grosser.mp3" },
+  { artist: "Go-Kneed and Colombia",title: "Zen Need",                   file: "Go-Kneed and Colombia - Zen Need.png",                audio: "Go-Kneed and Colombia - Zen Need.mp3" },
+  { artist: "Flayer",               title: "Draining Mud",               file: "Flayer – Draining Mud.png",                           audio: "Flayer – Draining Mud.mp3" },
+  { artist: "Byron Raider",         title: "The Scooter",                file: "Byron Raider – The Scooter.png",                      audio: "Byron Raider – The Scooter.mp3" },
+  { artist: "Scoop Foggy Fog",      title: "Aint No Sun",                file: "Scoop Foggy Fog – Aint No Sun.png",                   audio: "Scoop Foggy Fog – Aint No Sun.mp3" },
+  { artist: "Sleazy G",             title: "Toyz-n-the-Wood",            file: "Sleazy G – Toyz-n-the-Wood.png",                      audio: "Sleazy G – Toyz-n-the-Wood.mp3" },
+  { artist: "Fate No More",         title: "Calling the Fleas-es",       file: "Fate No More – Calling the Fleas-es.png",             audio: "Fate No More – Calling the Fleas-es.mp3" },
+  { artist: "Fate No More",         title: "Topic",                      file: "Fate No More – Topic.png",                            audio: "Fate No More – Topic.mp3" },
+  { artist: "The Fits-Bits",        title: "Where Seagulls Stare",       file: "The Fits-Bits – Where Seagulls Stare.png",            audio: "The Fits-Bits – Where Seagulls Stare.mp3" },
+  { artist: "Cool",                 title: "Crush",                      file: "Cool - Crush.png",                                    audio: "Cool - Crush.mp3" },
+  { artist: "Bonny Hash",           title: "Plod's Going to Shut You Down", file: "Bonny Hash - Plod's Going to Shut You Down.png",   audio: "Bonny Hash - Plod's Going to Shut You Down.mp3" },
+  { artist: "Malice in Plains",     title: "Clutch-Well",                file: "Malice in Plains – Clutch-well.png",                  audio: "Malice in Plains – Clutch-well.mp3" },
+  { artist: "Sad Decision",         title: "Injected",                   file: "Sad Decision – Injected.png",                         audio: "Sad Decision – Injected.mp3" },
+  { artist: "Neo",                  title: "Rainglow in the Spark",      file: "Neo – Rainglow in the Spark.png",                     audio: "Neo – Rainglow in the Spark.mp3" },
+  { artist: "Nogging Polly",        title: "Bloat",                      file: "Nogging Polly – Bloat.png",                           audio: "Nogging Polly – Bloat.mp3" },
+  { artist: "MISS",                 title: "Cutter",                     file: "MISS – Cutter.png",                                   audio: "MISS – Cutter.mp3" },
+  { artist: "Dice Tube",            title: "It Was A Hood Play",         file: "Dice Tube – It Was A Hood Play.png",                  audio: "Dice Tube – It Was A Hood Play.mp3" },
+];
+
+// ── STATE ──
+let currentIdx = 0;
+let isPlaying = false;
+let playTimer = null;
+let playSeconds = 0;
+const CLIP_DURATION = 30;
+
+// ── EQ SETUP ──
+const eqContainer = document.getElementById('eqBars');
+const BAR_COUNT = 40;
+const eqBars = [];
+for (let i = 0; i < BAR_COUNT; i++) {
+  const b = document.createElement('div');
+  b.className = 'eq-bar';
+  b.style.height = '6px';
+  eqContainer.appendChild(b);
+  eqBars.push(b);
+}
+
+let eqAnimFrame;
+function animateEQ() {
+  eqBars.forEach((b, i) => {
+    const base = isPlaying ? (20 + Math.random() * 50) : (2 + Math.random() * 8);
+    const h = Math.max(4, Math.min(55, base));
+    b.style.height = h + 'px';
+    b.style.opacity = isPlaying ? (0.6 + Math.random() * 0.4) : '0.15';
+  });
+  eqAnimFrame = requestAnimationFrame(animateEQ);
+}
+animateEQ();
+
+// ── BUILD CAROUSEL ──
+const track = document.getElementById('carouselTrack');
+const cards = [];
+
+function buildCards() {
+  songs.forEach((s, idx) => {
+    const card = document.createElement('div');
+    card.className = 'song-card' + (s.audio ? '' : ' no-audio');
+    card.dataset.idx = idx;
+
+    const img = document.createElement('img');
+    img.src = s.file;
+    img.alt = `${s.artist} - ${s.title}`;
+    img.onerror = () => { img.src = ''; img.style.background = '#112'; img.style.width='100%'; img.style.height='100%'; };
+
+    card.appendChild(img);
+
+    if (s.audio) {
+      const overlay = document.createElement('div');
+      overlay.className = 'card-overlay';
+      const btn = document.createElement('div');
+      btn.className = 'card-play-btn';
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
+      overlay.appendChild(btn);
+      card.appendChild(overlay);
+    } else {
+      const banner = document.createElement('div');
+      banner.className = 'coming-soon-banner';
+      banner.textContent = '⚡ COMING SOON ⚡';
+      card.appendChild(banner);
+    }
+
+    track.appendChild(card);
+    cards.push(card);
+
+    card.addEventListener('click', () => {
+      if (!s.audio) return;
+      const dist = idx - currentIdx;
+      if (dist === 0) {
+        togglePlay();
+      } else {
+        navigateTo(idx);
+      }
+    });
+  });
+  updateCarousel();
+}
+
+function getPos(idx) {
+  let p = idx - currentIdx;
+  // wrap for circular feel
+  const half = Math.floor(songs.length / 2);
+  if (p > half) p -= songs.length;
+  if (p < -half) p += songs.length;
+  return p;
+}
+
+function updateCarousel() {
+  cards.forEach((card, idx) => {
+    const pos = getPos(idx);
+    const clamped = Math.max(-4, Math.min(4, pos));
+    card.dataset.pos = clamped;
+    card.classList.toggle('active', pos === 0);
+    card.classList.toggle('playing', isPlaying && pos === 0);
+
+    // update play btn icon (no-audio cards have no .card-play-btn)
+    const btn = card.querySelector('.card-play-btn');
+    if (btn) {
+      if (pos === 0 && isPlaying) {
+        btn.innerHTML = `<svg viewBox="0 0 24 24" style="margin-left:0"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>`;
+        btn.classList.add('pause');
+      } else {
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>`;
+        btn.classList.remove('pause');
+      }
+    }
+  });
+
+  // info bar
+  const s = songs[currentIdx];
+  document.getElementById('infoArtist').textContent = s.artist.toUpperCase();
+  document.getElementById('infoTitle').textContent = s.audio ? s.title : s.title + '  ⚡ COMING SOON';
+  document.getElementById('songCounter').textContent = `${currentIdx + 1} / ${songs.length}`;
+
+  if (!isPlaying) {
+    document.getElementById('npText').textContent = s.audio
+      ? `${s.artist} — ${s.title}`
+      : `⚡ ${s.artist} — ${s.title} (Coming Soon)`;
+  }
+}
+
+function navigateTo(idx) {
+  stopPlayback();
+  currentIdx = ((idx % songs.length) + songs.length) % songs.length;
+  updateCarousel();
+}
+
+// ── PLAYBACK ──
+const audio = document.getElementById('audioPlayer');
+
+function togglePlay() {
+  if (isPlaying) {
+    stopPlayback();
+  } else {
+    startPlayback();
+  }
+}
+
+function startPlayback() {
+  const s = songs[currentIdx];
+  if (!s.audio) return;
+
+  audio.src = s.audio;
+  audio.playbackRate = 0.8;
+
+  const tryPlay = audio.play();
+  if (tryPlay !== undefined) {
+    tryPlay.catch(() => {
+      // mp3 not available yet — simulate playback visually
+    });
+  }
+
+  isPlaying = true;
+  playSeconds = 0;
+  updateNowPlaying();
+  updateCarousel();
+  updateBigBtn();
+
+  clearInterval(playTimer);
+  // Use actual audio.currentTime for progress so speed changes don't cause early cutoff
+  playTimer = setInterval(() => {
+    updateNowPlaying();
+  }, 250);
+}
+
+function stopPlayback() {
+  isPlaying = false;
+  audio.pause();
+  audio.currentTime = 0;
+  clearInterval(playTimer);
+  playSeconds = 0;
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('npTime').textContent = '0:00';
+  document.getElementById('npDot').classList.add('idle');
+  updateCarousel();
+  updateBigBtn();
+}
+
+function updateNowPlaying() {
+  const s = songs[currentIdx];
+  document.getElementById('npText').textContent = `▶ ${s.artist} — ${s.title}`;
+  document.getElementById('npDot').classList.remove('idle');
+
+  const cur = audio.currentTime || 0;
+  const dur = audio.duration || 0;
+  const pct = dur > 0 ? (cur / dur) * 100 : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  const remaining = dur > 0 ? Math.max(0, (dur - cur) / (audio.playbackRate || 1)) : 0;
+  const m = Math.floor(remaining / 60);
+  const sec = Math.floor(remaining % 60);
+  document.getElementById('npTime').textContent = `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function updateBigBtn() {
+  const btn = document.getElementById('bigPlayBtn');
+  if (isPlaying) {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="fill:#00bfff"><rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/></svg>`;
+  } else {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" style="fill:#00bfff"><polygon points="5,3 19,12 5,21"/></svg>`;
+  }
+}
+
+// audio ended naturally
+audio.addEventListener('ended', () => {
+  stopPlayback();
+  currentIdx = (currentIdx + 1) % songs.length;
+  updateCarousel();
+});
+
+// ── NAVIGATION ──
+document.getElementById('btnPrev').addEventListener('click', () => {
+  navigateTo(currentIdx - 1);
+});
+document.getElementById('btnNext').addEventListener('click', () => {
+  navigateTo(currentIdx + 1);
+});
+document.getElementById('bigPlayBtn').addEventListener('click', togglePlay);
+
+// keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft')  navigateTo(currentIdx - 1);
+  if (e.key === 'ArrowRight') navigateTo(currentIdx + 1);
+  if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+});
+
+// touch swipe
+let touchStartX = 0;
+document.querySelector('.carousel-area').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.querySelector('.carousel-area').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 40) {
+    navigateTo(currentIdx + (dx < 0 ? 1 : -1));
+  }
+});
+
+// ── INIT ──
+buildCards();
+</script>
+</body>
+</html>
